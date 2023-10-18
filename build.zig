@@ -1,5 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -12,19 +11,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // SDL2
-    const sdl_path = "./libs/SDL2/";
-    const include = std.Build.LazyPath.relative(sdl_path ++ "include");
-    exe.addIncludePath(include);
-    if (builtin.target.cpu.arch == .x86_64) {
-        const lib_path = std.Build.LazyPath.relative(sdl_path ++ "lib/x64");
-        exe.addLibraryPath(lib_path);
-        b.installBinFile(sdl_path ++ "lib/x64/SDL2.dll", "SDL2.dll");
-    } else {
-        const lib_path = std.Build.LazyPath.relative(sdl_path ++ "lib/x86");
-        exe.addLibraryPath(lib_path);
-        b.installBinFile(sdl_path ++ "lib/x86/SDL2.dll", "SDL2.dll");
-    }
+    // Static linked SDL2
     exe.linkSystemLibrary("SDL2");
     exe.linkLibC();
     b.installArtifact(exe);

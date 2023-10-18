@@ -4,17 +4,9 @@ An implementation of Conway's Game of Life in SDL2 using zig, for learning purpo
 
 ## Building the project
 
-### Directory structure of project
+### Requirements
 
-```text
-├───libs
-│   └───SDL2
-│       ├───lib
-│       │   ├───x64
-│       │   └───x86
-│       └───include
-├───src
-```
+- [SDL](https://wiki.libsdl.org/SDL2/Installation)
 
 ### Build step
 

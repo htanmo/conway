@@ -1,6 +1,6 @@
 const std = @import("std");
 const c = @cImport({
-    @cInclude("SDL.h");
+    @cInclude("SDL2/SDL.h");
 });
 
 // Constants
@@ -195,7 +195,7 @@ pub fn main() !void {
 
     // zig fmt: off
     // Creates a window
-    var window = c.SDL_CreateWindow(
+    const window = c.SDL_CreateWindow(
         "Game of life",
         c.SDL_WINDOWPOS_CENTERED,
         c.SDL_WINDOWPOS_CENTERED,
@@ -208,7 +208,7 @@ pub fn main() !void {
 
     // zig fmt: off
     // SDL Renderer
-    var renderer = c.SDL_CreateRenderer(
+    const renderer = c.SDL_CreateRenderer(
         window,
         0,
         c.SDL_RENDERER_PRESENTVSYNC

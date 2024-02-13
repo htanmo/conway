@@ -1,5 +1,5 @@
 const std = @import("std");
-const c = @cImport({
+const sdl = @cImport({
     @cInclude("SDL2/SDL.h");
 });
 
@@ -45,26 +45,34 @@ const BG = Color{
 
 // Game struct
 const Game = struct {
-    renderer: *c.SDL_Renderer, // SDL renderer
+    renderer: *sdl.SDL_Renderer, // SDL renderer
     grid: [ROWS][COLS]bool, // Grid
     next: [ROWS][COLS]bool, // Next grid
+    gen: usize,
 
     const Self = @This();
 
     // Constructor
-    fn init(renderer: *c.SDL_Renderer) Self {
+    fn init(renderer: *sdl.SDL_Renderer) Self {
         return Self{
             .renderer = renderer,
             .grid = [_][COLS]bool{[1]bool{false} ** COLS} ** ROWS,
             .next = [_][COLS]bool{[1]bool{false} ** COLS} ** ROWS,
+            .gen = 0,
         };
+    }
+
+    // Clears the grid
+    fn clear(self: *Self) void {
+        self.grid = [_][COLS]bool{[1]bool{false} ** COLS} ** ROWS;
+        self.gen = 0;
     }
 
     // Draws the grid
     fn drawGrid(self: Self) void {
         // zig fmt: off
         // Grid color
-        _ = c.SDL_SetRenderDrawColor(
+        _ = sdl.SDL_SetRenderDrawColor(
             self.renderer,
             LINES.r,
             LINES.g,
@@ -77,14 +85,14 @@ const Game = struct {
             var j: usize = 0;
             while (j < COLS) : (j += 1) {
                 // zig fmt: off
-                const box = c.SDL_Rect{
+                const box = sdl.SDL_Rect{
                     .x = @intCast(i * CELL_SIZE),
                     .y = @intCast(j * CELL_SIZE),
                     .w = CELL_SIZE,
                     .h = CELL_SIZE,
                 };
                 // zig fmt: on
-                _ = c.SDL_RenderDrawRect(self.renderer, &box);
+                _ = sdl.SDL_RenderDrawRect(self.renderer, &box);
             }
         }
     }
@@ -141,13 +149,13 @@ const Game = struct {
             while (j < COLS) : (j += 1) {
                 if (self.grid[i][j]) {
                     // zig fmt: off
-                    const cell = c.SDL_Rect{
+                    const cell = sdl.SDL_Rect{
                         .x = @intCast(i * CELL_SIZE),
                         .y = @intCast(j * CELL_SIZE),
                         .w = CELL_SIZE,
                         .h = CELL_SIZE
                     };
-                    _ = c.SDL_SetRenderDrawColor(
+                    _ = sdl.SDL_SetRenderDrawColor(
                         self.renderer,
                         ALIVE.r,
                         ALIVE.g,
@@ -155,7 +163,7 @@ const Game = struct {
                         ALIVE.a,
                     );
                     // zig fmt: on
-                    _ = c.SDL_RenderFillRect(self.renderer, &cell);
+                    _ = sdl.SDL_RenderFillRect(self.renderer, &cell);
                 }
             }
         }
@@ -186,35 +194,36 @@ const Game = struct {
             }
         }
         self.grid = self.next;
+        self.gen +%= 1;
     }
 };
 
 pub fn main() !void {
-    _ = c.SDL_Init(c.SDL_INIT_VIDEO);
-    defer c.SDL_Quit();
+    _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);
+    defer sdl.SDL_Quit();
 
     // zig fmt: off
     // Creates a window
-    const window = c.SDL_CreateWindow(
+    const window = sdl.SDL_CreateWindow(
         "Game of life",
-        c.SDL_WINDOWPOS_CENTERED,
-        c.SDL_WINDOWPOS_CENTERED,
+        sdl.SDL_WINDOWPOS_CENTERED,
+        sdl.SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH,
         SCREEN_HEIGHT,
         0
     );
     // zig fmt: on
-    defer c.SDL_DestroyWindow(window);
+    defer sdl.SDL_DestroyWindow(window);
 
     // zig fmt: off
     // SDL Renderer
-    const renderer = c.SDL_CreateRenderer(
+    const renderer = sdl.SDL_CreateRenderer(
         window,
         0,
-        c.SDL_RENDERER_PRESENTVSYNC
+        sdl.SDL_RENDERER_PRESENTVSYNC
     );
     // zig fmt: on
-    defer c.SDL_DestroyRenderer(renderer);
+    defer sdl.SDL_DestroyRenderer(renderer);
 
     const ticks_per_frame: c_uint = 1000 / FPS;
     var framestart: c_uint = undefined;
@@ -224,24 +233,23 @@ pub fn main() !void {
     var game = Game.init(renderer.?);
 
     mainloop: while (true) {
-        framestart = c.SDL_GetTicks();
-        var sdl_event: c.SDL_Event = undefined;
-        while (c.SDL_PollEvent(&sdl_event) != 0) {
+        framestart = sdl.SDL_GetTicks();
+        var sdl_event: sdl.SDL_Event = undefined;
+        while (sdl.SDL_PollEvent(&sdl_event) != 0) {
             switch (sdl_event.type) {
-                c.SDL_QUIT => break :mainloop,
-                c.SDL_MOUSEBUTTONDOWN => {
+                sdl.SDL_QUIT => break :mainloop,
+                sdl.SDL_MOUSEBUTTONDOWN => {
                     var x: c_int = undefined;
                     var y: c_int = undefined;
-                    _ = c.SDL_GetMouseState(&x, &y);
+                    _ = sdl.SDL_GetMouseState(&x, &y);
                     const i = @as(usize, @intCast(@divFloor(x, CELL_SIZE)));
                     const j = @as(usize, @intCast(@divFloor(y, CELL_SIZE)));
                     game.setState(i, j);
                 },
-                c.SDL_KEYDOWN => {
+                sdl.SDL_KEYDOWN => {
                     switch (sdl_event.key.keysym.sym) {
-                        ' ' => {
-                            paused = !paused;
-                        },
+                        ' ' => paused = !paused,
+                        sdl.SDLK_DELETE => game.clear(),
                         else => {},
                     }
                 },
@@ -250,7 +258,7 @@ pub fn main() !void {
         }
         // zig fmt: off
         // BG color
-        _ = c.SDL_SetRenderDrawColor(
+        _ = sdl.SDL_SetRenderDrawColor(
             renderer,
             BG.r,
             BG.g,
@@ -258,16 +266,16 @@ pub fn main() !void {
             BG.a,
         );
         // zig fmt: on
-        _ = c.SDL_RenderClear(renderer);
+        _ = sdl.SDL_RenderClear(renderer);
         game.drawGrid();
         game.drawCells();
         if (!paused) {
             game.update();
         }
-        c.SDL_RenderPresent(renderer);
-        frametime = @as(c_int, @intCast(c.SDL_GetTicks() - framestart));
+        sdl.SDL_RenderPresent(renderer);
+        frametime = @as(c_int, @intCast(sdl.SDL_GetTicks() - framestart));
         if (ticks_per_frame > frametime) {
-            c.SDL_Delay(ticks_per_frame - @as(c_uint, @intCast(frametime)));
+            sdl.SDL_Delay(ticks_per_frame - @as(c_uint, @intCast(frametime)));
         }
     }
 }

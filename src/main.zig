@@ -146,6 +146,7 @@ const Game = struct {
         _ = sdl.SDL_RenderDrawRect(self.renderer, &box);
     }
 
+    // Draws pause mode indicator
     fn drawPauseBox(self: Self) void {
         _ = sdl.SDL_SetRenderDrawColor(
             self.renderer,
@@ -209,6 +210,7 @@ const Game = struct {
 
     // Draws alive cells in the grid
     fn drawCells(self: *Self) void {
+        self.t_alive = 0;
         var i: usize = 0;
         while (i < ROWS) : (i += 1) {
             var j: usize = 0;
@@ -365,6 +367,10 @@ pub fn main() !void {
 
         game.drawGrid();
         game.drawCells();
+
+        if (game.t_alive == 0 and !game.paused) {
+            game.toggle();
+        }
 
         if (game.paused) {
             game.drawPauseBox();

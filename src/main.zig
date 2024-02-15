@@ -115,6 +115,7 @@ const Game = struct {
         }
     }
 
+    // Draws cursor
     fn drawCursor(self: Self, x: c_int, y: c_int) void {
         switch (self.curtype) {
             .death => {
@@ -141,6 +142,23 @@ const Game = struct {
             .y = @intCast(y * CELL_SIZE),
             .w = CELL_SIZE,
             .h = CELL_SIZE,
+        };
+        _ = sdl.SDL_RenderDrawRect(self.renderer, &box);
+    }
+
+    fn drawPauseBox(self: Self) void {
+        _ = sdl.SDL_SetRenderDrawColor(
+            self.renderer,
+            224,
+            30,
+            55,
+            0xff,
+        );
+        const box = sdl.SDL_Rect{
+            .x = @intCast(0),
+            .y = @intCast(0),
+            .w = SCREEN_WIDTH,
+            .h = SCREEN_HEIGHT,
         };
         _ = sdl.SDL_RenderDrawRect(self.renderer, &box);
     }
@@ -349,6 +367,7 @@ pub fn main() !void {
         game.drawCells();
 
         if (game.paused) {
+            game.drawPauseBox();
             var x: c_int = undefined; // mouse_cur_x
             var y: c_int = undefined; // mouse_cur_y
             _ = sdl.SDL_GetMouseState(&x, &y);

@@ -28,6 +28,9 @@ zig build -Doptimize=ReleaseSafe
 
 - ### Run the executable:
 
+> [!NOTE]
+> Executable will be found under ./zig-out/bin directory after compilation.
+
 ```bash
 ./conway
 ```

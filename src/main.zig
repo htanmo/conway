@@ -266,7 +266,7 @@ pub fn main() !void {
     // zig fmt: off
     // Creates a window
     const window = sdl.SDL_CreateWindow(
-        "Game of life",
+        "Conway's Game of Life",
         sdl.SDL_WINDOWPOS_CENTERED,
         sdl.SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH,

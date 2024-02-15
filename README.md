@@ -1,21 +1,45 @@
 # Conway's Game of Life
 
-An implementation of Conway's Game of Life written in Zig (using SDL for graphics).
+This is a simple implementation of Conway's Game of Life written in Zig,
+utilizing the SDL library for graphics rendering.
 
-for more info visit: [link](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
+## Build Instructions
 
-## Building the project
+Make sure you have Zig installed on your system. If not, you can download and install it from the official Zig website.
+Ensure SDL2 is installed on your system. You can install it using your package manager or download it from the SDL website.
 
-### Requirements
+- ### Clone this repository:
 
-- [SDL](https://wiki.libsdl.org/SDL2/Installation)
+```bash
+git clone https://github.com/htanmo/conway.git
+```
 
-### Build step
+- ### Navigate to the project directory:
 
-```sh
+```bash
+cd conway
+```
+
+- ### Build the project using Zig:
+
+```bash
 zig build -Doptimize=ReleaseSafe
 ```
 
-the executable will be present under `./zig-out/bin` from the root directory.
+- ### Run the executable:
+
+```bash
+./conway
+```
+
+## Keybindings
+
+```text
+Spacebar: Start/Pause the simulation.
+C / Middle Mouse: Clear the board (kill all cells).
+Right Mouse: Changes cursor mode.
+Left Mouse: Change Cell state.
+Esc: Exit the game.
+```
 
 ## [LICENSE](./LICENSE)

@@ -43,12 +43,21 @@ const BG = Color{
     .a = 0xff,
 };
 
+// Cursor type
+const CursorType = enum {
+    death,
+    birth,
+};
+
 // Game struct
 const Game = struct {
     renderer: *sdl.SDL_Renderer, // SDL renderer
     grid: [ROWS][COLS]bool, // Grid
     next: [ROWS][COLS]bool, // Next grid
-    gen: usize,
+    gen: usize, // Generation
+    t_alive: usize, // Total alive cell
+    paused: bool, // Game state
+    curtype: CursorType, // Cursor mode
 
     const Self = @This();
 
@@ -59,6 +68,9 @@ const Game = struct {
             .grid = [_][COLS]bool{[1]bool{false} ** COLS} ** ROWS,
             .next = [_][COLS]bool{[1]bool{false} ** COLS} ** ROWS,
             .gen = 0,
+            .t_alive = 0,
+            .paused = true,
+            .curtype = .birth,
         };
     }
 
@@ -66,6 +78,12 @@ const Game = struct {
     fn clear(self: *Self) void {
         self.grid = [_][COLS]bool{[1]bool{false} ** COLS} ** ROWS;
         self.gen = 0;
+        self.t_alive = 0;
+    }
+
+    // Toggle game state
+    fn toggle(self: *Self) void {
+        self.paused = !self.paused;
     }
 
     // Draws the grid
@@ -76,7 +94,7 @@ const Game = struct {
             self.renderer,
             LINES.r,
             LINES.g,
-            LINES.b, 
+            LINES.b,
             LINES.a,
         );
         // zig fmt: on
@@ -95,6 +113,36 @@ const Game = struct {
                 _ = sdl.SDL_RenderDrawRect(self.renderer, &box);
             }
         }
+    }
+
+    fn drawCursor(self: Self, x: c_int, y: c_int) void {
+        switch (self.curtype) {
+            .death => {
+                _ = sdl.SDL_SetRenderDrawColor(
+                    self.renderer,
+                    224,
+                    30,
+                    55,
+                    0xff,
+                );
+            },
+            .birth => {
+                _ = sdl.SDL_SetRenderDrawColor(
+                    self.renderer,
+                    ALIVE.r,
+                    ALIVE.g,
+                    ALIVE.b,
+                    0xff,
+                );
+            },
+        }
+        const box = sdl.SDL_Rect{
+            .x = @intCast(x * CELL_SIZE),
+            .y = @intCast(y * CELL_SIZE),
+            .w = CELL_SIZE,
+            .h = CELL_SIZE,
+        };
+        _ = sdl.SDL_RenderDrawRect(self.renderer, &box);
     }
 
     // Count numbers of alive neighbours of a cell
@@ -142,7 +190,7 @@ const Game = struct {
     }
 
     // Draws alive cells in the grid
-    fn drawCells(self: Self) void {
+    fn drawCells(self: *Self) void {
         var i: usize = 0;
         while (i < ROWS) : (i += 1) {
             var j: usize = 0;
@@ -164,14 +212,27 @@ const Game = struct {
                     );
                     // zig fmt: on
                     _ = sdl.SDL_RenderFillRect(self.renderer, &cell);
+                    self.t_alive += 1;
                 }
             }
         }
     }
 
+    // Change cursor mode
+    fn changeCurMode(self: *Self) void {
+        self.curtype = switch (self.curtype) {
+            .death => .birth,
+            .birth => .death,
+        };
+    }
+
     // Toggle cell state
     fn setState(self: *Self, x: usize, y: usize) void {
-        self.grid[x][y] = !self.grid[x][y];
+        if (self.paused and self.curtype == .birth) {
+            self.grid[x][y] = true;
+        } else if (self.paused and self.curtype == .death) {
+            self.grid[x][y] = false;
+        }
     }
 
     // Updates the grid state
@@ -225,10 +286,11 @@ pub fn main() !void {
     // zig fmt: on
     defer sdl.SDL_DestroyRenderer(renderer);
 
+    // initialized variable for later use
     const ticks_per_frame: c_uint = 1000 / FPS;
     var framestart: c_uint = undefined;
     var frametime: c_int = undefined;
-    var paused = true;
+    var mousedown = false;
 
     var game = Game.init(renderer.?);
 
@@ -239,17 +301,31 @@ pub fn main() !void {
             switch (sdl_event.type) {
                 sdl.SDL_QUIT => break :mainloop,
                 sdl.SDL_MOUSEBUTTONDOWN => {
-                    var x: c_int = undefined;
-                    var y: c_int = undefined;
-                    _ = sdl.SDL_GetMouseState(&x, &y);
-                    const i = @as(usize, @intCast(@divFloor(x, CELL_SIZE)));
-                    const j = @as(usize, @intCast(@divFloor(y, CELL_SIZE)));
-                    game.setState(i, j);
+                    switch (sdl_event.button.button) {
+                        sdl.SDL_BUTTON_RIGHT => {
+                            if (game.paused)
+                                game.changeCurMode();
+                        },
+                        sdl.SDL_BUTTON_LEFT => mousedown = true,
+                        sdl.SDL_BUTTON_MIDDLE => {
+                            if (game.paused)
+                                game.clear();
+                        },
+                        else => {},
+                    }
+                },
+                sdl.SDL_MOUSEBUTTONUP => {
+                    mousedown = false;
                 },
                 sdl.SDL_KEYDOWN => {
                     switch (sdl_event.key.keysym.sym) {
-                        ' ' => paused = !paused,
-                        sdl.SDLK_DELETE => game.clear(),
+                        sdl.SDLK_SPACE => game.toggle(),
+                        sdl.SDLK_c => {
+                            if (game.paused) {
+                                game.clear();
+                            }
+                        },
+                        sdl.SDLK_ESCAPE => break :mainloop,
                         else => {},
                     }
                 },
@@ -266,12 +342,40 @@ pub fn main() !void {
             BG.a,
         );
         // zig fmt: on
+
         _ = sdl.SDL_RenderClear(renderer);
+
         game.drawGrid();
         game.drawCells();
-        if (!paused) {
+
+        if (game.paused) {
+            var x: c_int = undefined; // mouse_cur_x
+            var y: c_int = undefined; // mouse_cur_y
+            _ = sdl.SDL_GetMouseState(&x, &y);
+            var i = @divFloor(x, CELL_SIZE);
+            var j = @divFloor(y, CELL_SIZE);
+            if (i >= ROWS - 1) {
+                i = ROWS - 1;
+            }
+            if (i < 0) {
+                i = 0;
+            }
+            if (j >= COLS - 1) {
+                j = COLS - 1;
+            }
+            if (j < 0) {
+                j = 0;
+            }
+            game.drawCursor(i, j);
+            if (mousedown) {
+                game.setState(@intCast(i), @intCast(j));
+            }
+        }
+
+        if (!game.paused) {
             game.update();
         }
+
         sdl.SDL_RenderPresent(renderer);
         frametime = @as(c_int, @intCast(sdl.SDL_GetTicks() - framestart));
         if (ticks_per_frame > frametime) {

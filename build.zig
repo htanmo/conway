@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // Static linked SDL2
+    // Dynamically linked SDL2
     exe.linkSystemLibrary("SDL2");
     exe.linkLibC();
 

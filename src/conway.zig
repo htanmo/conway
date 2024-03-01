@@ -1,6 +1,4 @@
-const sdl = @cImport({
-    @cInclude("SDL2/SDL.h");
-});
+const sdl = @import("sdl.zig");
 
 // Constants
 pub const SCREEN_WIDTH = 640;

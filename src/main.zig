@@ -1,9 +1,7 @@
 const std = @import("std");
 const conway = @import("conway.zig");
+const sdl = @import("sdl.zig");
 const process = std.process;
-const sdl = @cImport({
-    @cInclude("SDL2/SDL.h");
-});
 
 pub fn main() !void {
     _ = sdl.SDL_Init(sdl.SDL_INIT_VIDEO);

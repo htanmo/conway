@@ -3,6 +3,10 @@
 This is a simple implementation of Conway's Game of Life written in Zig,
 utilizing the SDL library for graphics rendering.
 
+## Screenshot
+
+![screenshot](./screenshot.png)
+
 ## Build Instructions
 
 Make sure you have Zig installed on your system. If not, you can download and install it from the official Zig website.

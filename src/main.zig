@@ -1,6 +1,8 @@
 const std = @import("std");
 const conway = @import("conway.zig");
-const sdl = @import("sdl.zig");
+const sdl = @cImport({
+    @cInclude("SDL2/SDL.h");
+});
 const process = std.process;
 
 pub fn main() !void {
